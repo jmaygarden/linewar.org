@@ -1,0 +1,13 @@
+[package]
+name = "fetch-leaderboard"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+leaderboard-scraper = { path = "../leaderboard-scraper" }
+
+[dependencies.tokio]
+version = "1.17.0"
+features = ["macros", "rt", "rt-multi-thread"]
