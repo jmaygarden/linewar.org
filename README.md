@@ -1,2 +1,2 @@
 # linewar.org
-Line Ware community web site
+Line War community web site
