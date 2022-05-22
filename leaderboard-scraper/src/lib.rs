@@ -17,12 +17,12 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Clone, Debug, Default)]
 pub struct Entry {
-    pub rank: u32,
+    pub rank: i32,
     pub avatar: String,
     pub name: String,
-    pub rating: f64,
-    pub wins: u32,
-    pub losses: u32,
+    pub rating: f32,
+    pub wins: i32,
+    pub losses: i32,
 }
 
 pub async fn scrape_leaderboard() -> Result<Vec<Entry>> {
