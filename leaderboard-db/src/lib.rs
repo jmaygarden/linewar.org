@@ -2,7 +2,6 @@
 extern crate diesel;
 
 use diesel::{Connection, PgConnection, RunQueryDsl};
-use dotenv::dotenv;
 use models::{NewEntry, NewLeaderboardScrape};
 use std::{env::VarError, time::SystemTime};
 
@@ -27,8 +26,6 @@ pub struct LeaderboardDatabase {
 
 impl LeaderboardDatabase {
     pub fn new() -> Result<Self> {
-        dotenv().ok();
-
         let database_url = std::env::var("DATABASE_URL").map_err(Error::from)?;
         let connection = PgConnection::establish(database_url.as_str()).map_err(Error::from)?;
 
@@ -56,14 +53,5 @@ impl LeaderboardDatabase {
             .values(records)
             .execute(&self.connection)
             .map_err(Error::from)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
     }
 }

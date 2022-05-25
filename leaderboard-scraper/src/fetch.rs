@@ -1,12 +1,12 @@
 use crate::{Error, Result};
 
-const LEADERBOARD_INDEX_URL: &str = "https://linewar.com/Leaderboard/Index";
-const USER_AGENT: &str = "linewar.org";
+pub const USER_AGENT: &str = "linewar.org";
 
 pub async fn fetch_leaderboard(page: impl Into<Option<u32>>) -> Result<String> {
     let client = reqwest::Client::builder().user_agent(USER_AGENT).build()?;
+    const URL: &str = "https://linewar.com/Leaderboard/Index";
     let response = client
-        .get(LEADERBOARD_INDEX_URL)
+        .get(URL)
         .query(&[("page", page.into().unwrap_or(1))])
         .send()
         .await
@@ -21,6 +21,6 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_index() {
-        let _ = fetch_leaderboard(None).await.unwrap();
+        fetch_leaderboard(None).await.unwrap();
     }
 }

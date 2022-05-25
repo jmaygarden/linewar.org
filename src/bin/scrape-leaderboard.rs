@@ -1,8 +1,10 @@
+use dotenv::dotenv;
 use leaderboard_db::{models::{self, NewEntry}, LeaderboardDatabase};
 use leaderboard_scraper::scrape_leaderboard;
 
 #[tokio::main]
 async fn main() {
+    dotenv().ok();
     tracing_subscriber::fmt::init();
 
     let db = LeaderboardDatabase::new().expect("error connecting to databse");
