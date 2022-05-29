@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate diesel;
 
-use diesel::{Connection, PgConnection, RunQueryDsl};
+use diesel::{Connection, ExpressionMethods, JoinOnDsl, PgConnection, QueryDsl, RunQueryDsl};
 use models::{NewEntry, NewLeaderboardScrape};
 use std::{env::VarError, time::SystemTime};
 
@@ -51,6 +51,20 @@ impl LeaderboardDatabase {
     pub fn store_entries(&self, records: &[NewEntry]) -> Result<usize> {
         diesel::insert_into(schema::leaderboard::table)
             .values(records)
+            .execute(&self.connection)
+            .map_err(Error::from)
+    }
+
+    pub fn index_names(&self) -> Result<usize> {
+        let new_names = schema::leaderboard::table
+            .select(schema::leaderboard::name)
+            .distinct()
+            .left_join(schema::names::table.on(schema::leaderboard::name.eq(schema::names::name)))
+            .filter(schema::names::name.is_null());
+
+        diesel::insert_into(schema::names::table)
+            .values(new_names)
+            .into_columns(schema::names::name)
             .execute(&self.connection)
             .map_err(Error::from)
     }
