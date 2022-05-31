@@ -153,6 +153,7 @@ mod test {
 
     #[tokio::test]
     async fn test_steam_search_users() {
+        dotenv::dotenv().unwrap();
         let mut steam = Steam::new().expect("error initializing Steam client");
 
         steam

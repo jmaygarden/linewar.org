@@ -57,7 +57,7 @@ async fn main() {
     let n = db
         .associate_leaderboard()
         .expect("error associating leaderboard entries with Steam players");
-    println!("Associated {n} games with players.");
+    println!("Associated {n} leaderboard entries with players.");
 }
 
 async fn init() -> (LeaderboardDatabase, Steam) {
