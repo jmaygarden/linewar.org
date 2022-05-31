@@ -1,4 +1,7 @@
-use crate::{fetch::USER_AGENT, Error, Result};
+use crate::{
+    fetch::USER_AGENT, parse_avatar_url, scrape::scrape_steam_users, Error, Result, SteamId,
+    SteamUser,
+};
 use tracing::info;
 
 pub struct Steam {
@@ -38,7 +41,7 @@ impl Steam {
         Ok(())
     }
 
-    pub async fn search_users(&self, search_text: &str) -> Result<String> {
+    pub async fn search_users(&self, search_text: &str, page: i32) -> Result<UserSearchResponse> {
         const URL: &str = "https://steamcommunity.com/search/SearchCommunityAjax";
         let session_id = self
             .session_id
@@ -50,7 +53,7 @@ impl Steam {
             .query(&[
                 ("text", search_text),
                 ("filter", "users"),
-                ("page", "1"),
+                ("page", page.to_string().as_str()),
                 ("sessionid", session_id.as_str()),
             ])
             .send()
@@ -61,8 +64,42 @@ impl Steam {
         response
             .json::<UserSearchResponse>()
             .await
-            .map(|response| response.html)
             .map_err(Error::from)
+    }
+
+    pub async fn find_id_with_avatar(
+        &self,
+        name: &str,
+        avatar_hash: &str,
+        depth: i32,
+    ) -> Result<SteamId> {
+        let filter_map = |user: SteamUser| {
+            if user.name != name {
+                return None;
+            }
+
+            parse_avatar_url(user.avatar.as_str()).and_then(|hash| {
+                if hash == avatar_hash {
+                    Some(user.id)
+                } else {
+                    None
+                }
+            })
+        };
+
+        for page in 0..depth {
+            let response = self.search_users(name, page).await?;
+
+            if response.search_result_count == 0 {
+                return Err(Error::UserNotFound);
+            } else if let Ok(user) = scrape_steam_users(response.html.as_str(), filter_map)
+                .and_then(|list| list.into_iter().next().ok_or(Error::UserNotFound))
+            {
+                return Ok(user);
+            }
+        }
+
+        Err(Error::SearchAborted)
     }
 
     pub async fn resolve_id(&self, vanityurl: &str) -> Result<u64> {
@@ -106,7 +143,7 @@ pub struct UserSearchResponse {
     pub search_text: String,
     pub search_result_count: i32,
     pub search_filter: String,
-    pub search_page: i32,
+    pub search_page: serde_json::Value,
     pub html: String,
 }
 
@@ -122,7 +159,7 @@ mod test {
             .start_session()
             .await
             .expect("failed to fetch the session ID cookie");
-        steam.search_users("monjardin").await.unwrap();
+        steam.search_users("monjardin", 1).await.unwrap();
     }
 
     #[tokio::test]

@@ -8,10 +8,14 @@ pub mod steam;
 pub enum Error {
     #[error("HTML parse error: {0}")]
     HtmlParseError(String),
+    #[error("JSON error: {0}")]
+    JsonError(#[from] serde_json::Error),
     #[error("parse error: {0}")]
     ParseError(Cow<'static, str>),
     #[error("reqwest error: {0}")]
     RequestError(#[from] reqwest::Error),
+    #[error("user search aborted")]
+    SearchAborted,
     #[error("session ID not found")]
     SessionIdNotFound,
     #[error("STEAM_API_KEY must be set")]
@@ -37,6 +41,8 @@ pub struct Entry {
     pub wins: i32,
     pub losses: i32,
 }
+
+pub use steam::Steam;
 
 #[derive(Debug, PartialEq)]
 pub enum SteamId {

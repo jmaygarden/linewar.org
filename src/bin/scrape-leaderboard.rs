@@ -16,7 +16,7 @@ async fn main() {
         .expect("Error fetching the Line War leaderboard.");
     let records: Vec<NewEntry> = leaderboard.iter()
         .map(|entry| models::NewEntry {
-            scrape_id: scrape.id,
+            leaderboard_scrape_id: scrape.id,
             rank: entry.rank,
             avatar: entry.avatar.as_str(),
             name: entry.name.as_str(),

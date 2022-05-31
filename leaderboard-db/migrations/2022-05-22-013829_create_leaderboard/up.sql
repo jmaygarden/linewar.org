@@ -1,7 +1,4 @@
-CREATE TABLE leaderboard_scrape (
-	id SERIAL PRIMARY KEY,
-	at TIMESTAMP NOT NULL
-);
+CREATE TABLE leaderboard_scrape (id SERIAL PRIMARY KEY, at TIMESTAMP NOT NULL);
 
 CREATE TABLE leaderboard (
 	id SERIAL PRIMARY KEY,

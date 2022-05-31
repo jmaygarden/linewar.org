@@ -25,12 +25,11 @@ async fn main() {
         .await
         .expect("failed to fetch the session ID cookie");
 
-    let html = steam
-        .search_users(args.name.as_str())
+    let search_response = steam
+        .search_users(args.name.as_str(), 1)
         .await
         .expect("error searching for Steam users");
-
-    let users = scrape_steam_users(html.as_str(), |user| {
+    let users = scrape_steam_users(search_response.html.as_str(), |user| {
         let hash = parse_avatar_url(user.avatar.as_str())?;
 
         if user.name == args.name && hash == args.avatar {
