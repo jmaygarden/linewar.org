@@ -1,8 +1,11 @@
 #[macro_use]
 extern crate diesel;
 
-use diesel::{Connection, ExpressionMethods, JoinOnDsl, PgConnection, QueryDsl, RunQueryDsl};
-use models::{NewEntry, NewLeaderboardScrape};
+use diesel::{
+    BoolExpressionMethods, Connection, ExpressionMethods, JoinOnDsl, PgConnection, QueryDsl,
+    RunQueryDsl,
+};
+use models::{NewEntry, NewLeaderboardScrape, NewSteamAssociation};
 use std::{env::VarError, time::SystemTime};
 
 pub mod models;
@@ -65,6 +68,64 @@ impl LeaderboardDatabase {
         diesel::insert_into(schema::names::table)
             .values(new_names)
             .into_columns(schema::names::name)
+            .execute(&self.connection)
+            .map_err(Error::from)
+    }
+
+    pub fn hash_avatar_urls(&self) -> Result<usize> {
+        let sql = include_str!("hash-avatar-urls.sql");
+
+        diesel::sql_query(sql)
+            .execute(&self.connection)
+            .map_err(Error::from)
+    }
+
+    pub fn get_new_players(&self) -> Result<Vec<(String, String, i32, i32)>> {
+        use schema::{avatar_hash, avatar_map, leaderboard, names, steam_association};
+
+        leaderboard::table
+            .inner_join(names::table.on(leaderboard::name.eq(names::name)))
+            .inner_join(avatar_map::table.on(leaderboard::avatar.eq(avatar_map::url)))
+            .inner_join(avatar_hash::table.on(avatar_map::avatar_hash_id.eq(avatar_hash::id)))
+            .left_join(
+                steam_association::table.on(names::id
+                    .eq(steam_association::names_id)
+                    .and(avatar_hash::id.eq(steam_association::avatar_hash_id))),
+            )
+            .filter(steam_association::id.is_null())
+            .select((
+                leaderboard::name,
+                avatar_hash::hash,
+                names::id,
+                avatar_hash::id,
+            ))
+            .distinct()
+            .load(&self.connection)
+            .map_err(Error::from)
+    }
+
+    pub fn associate_player(
+        &self,
+        names_id: i32,
+        avatar_hash_id: i32,
+        steam_id: Vec<u8>,
+    ) -> Result<usize> {
+        let record = NewSteamAssociation {
+            names_id,
+            avatar_hash_id,
+            steam_id,
+        };
+
+        diesel::insert_into(schema::steam_association::table)
+            .values(&record)
+            .execute(&self.connection)
+            .map_err(Error::from)
+    }
+
+    pub fn associate_leaderboard(&self) -> Result<usize> {
+        let sql = include_str!("associate-leaderboard.sql");
+
+        diesel::sql_query(sql)
             .execute(&self.connection)
             .map_err(Error::from)
     }

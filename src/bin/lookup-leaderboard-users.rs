@@ -28,13 +28,12 @@ async fn main() {
 }
 
 async fn find_user(steam: &Steam, name: &str, avatar: &str) -> Result<u64> {
-    let html = steam
-        .search_users(name)
+    let search_response = steam
+        .search_users(name, 1)
         .await
         .expect("error searching for Steam users");
     let avatar_hash = parse_avatar_url(avatar).ok_or(Error::UserNotFound)?;
-
-    let users = scrape_steam_users(html.as_str(), |user| {
+    let users = scrape_steam_users(search_response.html.as_str(), |user| {
         let user_hash = parse_avatar_url(user.avatar.as_str())?;
 
         if user.name == name && user_hash == avatar_hash {

@@ -46,21 +46,9 @@ pub struct Names {
     pub name: String,
 }
 
-#[derive(Insertable)]
-#[table_name = "names"]
-pub struct NewName {
-    pub name: String,
-}
-
 #[derive(Queryable)]
 pub struct AvatarHash {
     pub id: i32,
-    pub hash: String,
-}
-
-#[derive(Insertable)]
-#[table_name = "avatar_hash"]
-pub struct NewAvatarHash {
     pub hash: String,
 }
 

@@ -3,12 +3,12 @@ ALTER TABLE
 
 CREATE TABLE names (
     id SERIAL PRIMARY KEY,
-    name VARCHAR NOT NULL UNIQUE
+    name VARCHAR UNIQUE NOT NULL
 );
 
 CREATE TABLE avatar_hash (
     id SERIAL PRIMARY KEY,
-    hash VARCHAR NOT NULL UNIQUE
+    hash VARCHAR UNIQUE NOT NULL
 );
 
 CREATE TABLE avatar_map (
@@ -31,9 +31,9 @@ CREATE INDEX leaderboard_to_steam_index ON steam_association (names_id, avatar_h
 CREATE INDEX steam_to_leaderboard_index ON steam_association (steam_id);
 
 CREATE TABLE associated_leaderboard (
+    leaderboard_id INT UNIQUE NOT NULL,
     steam_association_id INT NOT NULL,
-    leaderboard_id INT NOT NULL,
-    CONSTRAINT pk_associated_leaderboard PRIMARY KEY (steam_association_id, leaderboard_id),
-    CONSTRAINT fk_steam_association FOREIGN KEY(steam_association_id) REFERENCES steam_association(id),
-    CONSTRAINT fk_leaderboard FOREIGN KEY(leaderboard_id) REFERENCES leaderboard(id)
+    CONSTRAINT pk_associated_leaderboard PRIMARY KEY (leaderboard_id, steam_association_id),
+    CONSTRAINT fk_leaderboard FOREIGN KEY(leaderboard_id) REFERENCES leaderboard(id),
+    CONSTRAINT fk_steam_association FOREIGN KEY(steam_association_id) REFERENCES steam_association(id)
 )
