@@ -130,3 +130,18 @@ impl LeaderboardEntry {
             .and_then(|bytes| bytes.as_slice().read_u64::<LittleEndian>().ok())
     }
 }
+
+#[derive(Debug, Queryable, Serialize)]
+pub struct PlayerIGN {
+    pub name: String,
+    pub avatar_url: String,
+}
+
+#[derive(Debug, Queryable, Serialize)]
+pub struct PlayerRating {
+    pub timestamp: SystemTime,
+    pub rank: i32,
+    pub rating: f32,
+    pub wins: i32,
+    pub losses: i32,
+}

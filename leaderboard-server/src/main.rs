@@ -1,11 +1,6 @@
 use askama::Template;
-use axum::{
-    http::StatusCode,
-    response::{Html, IntoResponse},
-    routing::get,
-    Extension, Router,
-};
-use leaderboard_db::service::{DatabaseService, Leaderboard};
+use axum::{extract::Path, http::StatusCode, response::Html, routing::get, Extension, Router};
+use leaderboard_db::service::{DatabaseService, Leaderboard, Player};
 use std::net::SocketAddr;
 use tracing::info;
 
@@ -17,6 +12,7 @@ async fn main() {
     let service = Services::start().await;
     let app = Router::new()
         .route("/", get(root))
+        .route("/player/:steam_id", get(player))
         .layer(Extension(service));
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     info!("Listening on {addr}");
@@ -41,12 +37,12 @@ impl Services {
 }
 
 async fn root(Extension(services): Extension<Services>) -> Result<Html<String>, StatusCode> {
-    let leaderboard = services
+    let context = services
         .db
         .get_leaderboard()
         .await
         .map_err(|_error| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let template = RootTemplate { leaderboard };
+    let template = RootTemplate { context };
 
     match template.render() {
         Ok(html) => Ok(Html(html)),
@@ -57,5 +53,28 @@ async fn root(Extension(services): Extension<Services>) -> Result<Html<String>, 
 #[derive(Template)]
 #[template(path = "root.html")]
 struct RootTemplate {
-    leaderboard: Leaderboard,
+    context: Leaderboard,
+}
+
+async fn player(
+    Extension(services): Extension<Services>,
+    Path(steam_id): Path<u64>,
+) -> Result<Html<String>, StatusCode> {
+    let context = services
+        .db
+        .get_player(steam_id)
+        .await
+        .map_err(|_error| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let template = PlayerTemplate { context };
+
+    match template.render() {
+        Ok(html) => Ok(Html(html)),
+        Err(_error) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+#[derive(Template)]
+#[template(path = "player.html")]
+struct PlayerTemplate {
+    context: Player,
 }

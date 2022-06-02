@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content %}
-<h1>LINE WAR Leaderboard ({{ leaderboard.timestamp }})</h1>
+<h1><a href="/">LINE WAR Leaderboard ({{ context.timestamp }})</a></h1>
 <table>
     <thead>
         <tr>
@@ -19,7 +19,7 @@
             <th>Losses</th>
         </tr>
     </thead>
-    {% for entry in leaderboard.entries %}
+    {% for entry in context.entries %}
     <tr>
         <td>{{ entry.rank }}</td>
         {% match entry.get_steam_id() %}
