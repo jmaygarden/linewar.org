@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content %}
-<h1><a href="/">LINE WAR Player ({{ context.timestamp }})</a></h1>
+<h1><a href="/">linewar.org</a></h1>
 <h2> {{ context.player.name }}</h2>
 <h3>History</h3>
 <table>
@@ -33,4 +33,5 @@
         {% endfor %}
     </tbody>
 </table>
+<p>Updated: {{ context.timestamp }}</p>
 {% endblock %}

@@ -117,6 +117,7 @@ impl DatabaseService {
                     leaderboard::wins,
                     leaderboard::losses,
                 ))
+                .order(leaderboard_scrape::at)
                 .load::<PlayerRating>(&context.connection)
                 .map(|player_rating| {
                     let timestamp = systemtime_to_iso8601(scrape.at);
