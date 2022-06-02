@@ -1,4 +1,7 @@
 use super::schema::*;
+use byteorder::{LittleEndian, ReadBytesExt};
+use diesel::Queryable;
+use serde::{Serialize, Serializer};
 use std::time::SystemTime;
 
 #[derive(Queryable)]
@@ -86,4 +89,59 @@ pub struct NewSteamAssociation {
 pub struct AssociatedLeaderboard {
     pub steam_association_id: i32,
     pub leaderboard_id: i32,
+}
+
+#[derive(Debug, Queryable, Serialize)]
+pub struct LeaderboardEntry {
+    pub rank: i32,
+    pub avatar_url: String,
+    pub name: String,
+    pub rating: f32,
+    pub wins: i32,
+    pub losses: i32,
+    #[serde(serialize_with = "serialize_steam_id")]
+    pub steam_id: Option<Vec<u8>>,
+}
+
+fn serialize_steam_id<S>(
+    value: &Option<Vec<u8>>,
+    serializer: S,
+) -> std::result::Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let steam_id = match value {
+        Some(bytes) => Some(
+            bytes
+                .as_slice()
+                .read_u64::<LittleEndian>()
+                .map_err(serde::ser::Error::custom)?,
+        ),
+        None => None,
+    };
+
+    steam_id.serialize(serializer)
+}
+
+impl LeaderboardEntry {
+    pub fn get_steam_id(&self) -> Option<u64> {
+        self.steam_id
+            .as_ref()
+            .and_then(|bytes| bytes.as_slice().read_u64::<LittleEndian>().ok())
+    }
+}
+
+#[derive(Debug, Queryable, Serialize)]
+pub struct PlayerIGN {
+    pub name: String,
+    pub avatar_url: String,
+}
+
+#[derive(Debug, Queryable, Serialize)]
+pub struct PlayerRating {
+    pub timestamp: SystemTime,
+    pub rank: i32,
+    pub rating: f32,
+    pub wins: i32,
+    pub losses: i32,
 }

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Player {{ context.player.name }}{% endblock %}
+
+{% block head %}
+<style>
+</style>
+{% endblock %}
+
+{% block content %}
+<h1><a href="/">LINE WAR Player ({{ context.timestamp }})</a></h1>
+<h2> {{ context.player.name }}</h2>
+<h3>History</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Date & Time</th>
+            <th>Rank</th>
+            <th>Rating</th>
+            <th>Wins</th>
+            <th>Losses</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry in context.history %}
+        <tr>
+            <td>{{ entry.timestamp }}</td>
+            <td>{{ entry.rank }}</td>
+            <td>{{ entry.rating }}</td>
+            <td>{{ entry.wins }}</td>
+            <td>{{ entry.losses }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

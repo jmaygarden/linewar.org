@@ -59,6 +59,7 @@ joinable!(associated_leaderboard -> leaderboard (leaderboard_id));
 joinable!(associated_leaderboard -> steam_association (steam_association_id));
 joinable!(leaderboard -> leaderboard_scrape (leaderboard_scrape_id));
 joinable!(steam_association -> names (names_id));
+joinable!(steam_association -> avatar_hash (avatar_hash_id));
 
 allow_tables_to_appear_in_same_query!(
     associated_leaderboard,
