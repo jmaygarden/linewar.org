@@ -14,14 +14,14 @@ hash AS (
     SELECT
         map.hash
     FROM
-        map RETURNING *
+        map ON CONFLICT DO NOTHING
 )
 INSERT INTO
     avatar_map(url, avatar_hash_id) (
         SELECT
             map.url,
-            hash.id
+            avatar_hash.id
         FROM
             map
-            INNER JOIN hash ON map.hash = hash.hash
+            INNER JOIN avatar_hash ON map.hash = avatar_hash.hash
     ) ON CONFLICT DO NOTHING;

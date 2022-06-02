@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Leaderboard{% endblock %}
+
+{% block head %}
+<style>
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>LINE WAR Leaderboard ({{ leaderboard.timestamp }})</h1>
+<table>
+    <thead>
+        <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Rating</th>
+            <th>Wins</th>
+            <th>Losses</th>
+        </tr>
+    </thead>
+    {% for entry in leaderboard.entries %}
+    <tr>
+        <td>{{ entry.rank }}</td>
+        {% match entry.get_steam_id() %}
+        {% when Some with (steam_id) %}
+        <td><a href="/player/{{ steam_id }}">{{ entry.name }}</a></td>
+        {% when None %}
+        <td>{{ entry.name }}</td>
+        {% endmatch %}
+        <td>{{ entry.rating }}</td>
+        <td>{{ entry.wins }}</td>
+        <td>{{ entry.losses }}</td>
+    </tr>
+    {% endfor %}
+    <tbody>
+
+    </tbody>
+</table>
+{% endblock %}

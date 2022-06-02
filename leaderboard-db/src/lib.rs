@@ -7,16 +7,24 @@ use diesel::{
 };
 use models::{NewEntry, NewLeaderboardScrape, NewSteamAssociation};
 use std::{env::VarError, time::SystemTime};
+use tokio::sync::AcquireError;
 
 pub mod models;
 pub mod schema;
+pub mod service;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("Database connection error: {0}")]
     ConnectionError(#[from] diesel::result::ConnectionError),
+    #[error("Database connection pool error: {0}")]
+    ConnectionPoolError(#[from] r2d2::Error),
     #[error("Databse query error: {0}")]
     QueryError(#[from] diesel::result::Error),
+    #[error("Oneshot receive error: {0}")]
+    OneshotReceiverError(#[from] tokio::sync::oneshot::error::RecvError),
+    #[error("Semaphore closed")]
+    SemaphoreError(#[from] AcquireError),
     #[error("DATABASE_URL must be set")]
     UrlNotSet(#[from] VarError),
 }
