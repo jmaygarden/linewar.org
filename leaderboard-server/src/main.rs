@@ -1,19 +1,33 @@
 use askama::Template;
-use axum::{extract::Path, http::StatusCode, response::Html, routing::get, Extension, Router};
+use axum::{
+    extract::Path,
+    http::StatusCode,
+    response::{Html, IntoResponse},
+    routing::get,
+    Extension, Router,
+};
 use leaderboard_db::service::{DatabaseService, Leaderboard, Player};
 use std::net::SocketAddr;
+use tower::ServiceBuilder;
+use tower_http::trace::TraceLayer;
 use tracing::info;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry};
+use tracing_tree::HierarchicalLayer;
 
 #[tokio::main]
 async fn main() {
-    dotenv::dotenv().ok();
-    tracing_subscriber::fmt::init();
+    setup();
 
     let service = Services::start().await;
     let app = Router::new()
         .route("/", get(root))
         .route("/player/:steam_id", get(player))
-        .layer(Extension(service));
+        .layer(Extension(service))
+        .layer(
+            ServiceBuilder::new()
+                .layer(TraceLayer::new_for_http())
+                .into_inner(),
+        );
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     info!("Listening on {addr}");
 
@@ -21,6 +35,19 @@ async fn main() {
         .serve(app.into_make_service())
         .await
         .expect("critical error");
+}
+
+fn setup() {
+    dotenv::dotenv().ok();
+
+    Registry::default()
+        .with(EnvFilter::from_default_env())
+        .with(
+            HierarchicalLayer::new(2)
+                .with_targets(true)
+                .with_bracketed_fields(true),
+        )
+        .init();
 }
 
 #[derive(Clone)]
@@ -36,7 +63,8 @@ impl Services {
     }
 }
 
-async fn root(Extension(services): Extension<Services>) -> Result<Html<String>, StatusCode> {
+#[tracing::instrument(skip(services))]
+async fn root(Extension(services): Extension<Services>) -> impl IntoResponse {
     let context = services
         .db
         .get_leaderboard()
@@ -56,10 +84,11 @@ struct RootTemplate {
     context: Leaderboard,
 }
 
+#[tracing::instrument(skip(services))]
 async fn player(
     Extension(services): Extension<Services>,
     Path(steam_id): Path<u64>,
-) -> Result<Html<String>, StatusCode> {
+) -> impl IntoResponse {
     let context = services
         .db
         .get_player(steam_id)
