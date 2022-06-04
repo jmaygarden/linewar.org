@@ -1,19 +1,19 @@
 use crate::{
-    models::{LeaderboardEntry, LeaderboardScrape, PlayerIGN, PlayerRating},
+    models::{LeaderboardEntry, LeaderboardScrape, PlayerIGN, PlayerStatistics},
     schema::{
         associated_leaderboard, avatar_hash, leaderboard, leaderboard_scrape, names,
         steam_association,
     },
     Error, Result,
 };
-use chrono::{DateTime, Utc};
+use chrono::{serde::ts_milliseconds, DateTime, Utc};
 use diesel::{
     r2d2::ConnectionManager, ExpressionMethods, JoinOnDsl, NullableExpressionMethods, PgConnection,
     QueryDsl, RunQueryDsl,
 };
 use r2d2::{Pool, PooledConnection};
 use serde::Serialize;
-use std::{sync::Arc, time::SystemTime};
+use std::sync::Arc;
 use tokio::sync::{oneshot, Semaphore, SemaphorePermit};
 
 type PgConnectionManager = ConnectionManager<PgConnection>;
@@ -83,7 +83,7 @@ impl DatabaseService {
                 .order(leaderboard::rank)
                 .load(&context.connection)
                 .map(move |entries| {
-                    let timestamp = systemtime_to_iso8601(scrape.at);
+                    let timestamp = scrape.at.into();
 
                     context.tx.send(Leaderboard { timestamp, entries }).ok();
                 })
@@ -118,9 +118,14 @@ impl DatabaseService {
                     leaderboard::losses,
                 ))
                 .order(leaderboard_scrape::at.desc())
-                .load::<PlayerRating>(&context.connection)
+                .load::<PlayerStatistics>(&context.connection)
                 .map(|player_rating| {
-                    let timestamp = systemtime_to_iso8601(scrape.at);
+                    let timestamp = scrape.at.into();
+                    let player = PlayerId {
+                        name: player.name,
+                        avatar: player.avatar_url,
+                        steam_id,
+                    };
                     let history = player_rating.into_iter().map(History::from).collect();
 
                     context.tx.send(Player {
@@ -150,42 +155,48 @@ fn get_latest_scrape(connection: &PgPooledConnection) -> Result<LeaderboardScrap
         .map_err(Error::from)
 }
 
-fn systemtime_to_iso8601(timestamp: SystemTime) -> String {
-    DateTime::<Utc>::from(timestamp).to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
-}
-
 #[derive(Debug, Serialize)]
 pub struct Leaderboard {
-    pub timestamp: String,
+    #[serde(with = "ts_milliseconds")]
+    pub timestamp: DateTime<Utc>,
     pub entries: Vec<LeaderboardEntry>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct Player {
-    pub timestamp: String,
-    pub player: PlayerIGN,
+    #[serde(with = "ts_milliseconds")]
+    pub timestamp: DateTime<Utc>,
+    pub player: PlayerId,
     pub history: Vec<History>,
 }
 
 #[derive(Debug, Serialize)]
+pub struct PlayerId {
+    pub name: String,
+    pub avatar: String,
+    pub steam_id: u64,
+}
+
+#[derive(Debug, Serialize)]
 pub struct History {
-    pub timestamp: String,
+    #[serde(with = "ts_milliseconds")]
+    pub timestamp: DateTime<Utc>,
     pub rank: i32,
     pub rating: f32,
     pub wins: i32,
     pub losses: i32,
 }
 
-impl From<PlayerRating> for History {
-    fn from(value: PlayerRating) -> Self {
-        let PlayerRating {
+impl From<PlayerStatistics> for History {
+    fn from(value: PlayerStatistics) -> Self {
+        let PlayerStatistics {
             timestamp,
             rank,
             rating,
             wins,
             losses,
         } = value;
-        let timestamp = systemtime_to_iso8601(timestamp);
+        let timestamp = timestamp.into();
 
         Self {
             timestamp,

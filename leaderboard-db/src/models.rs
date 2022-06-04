@@ -138,7 +138,7 @@ pub struct PlayerIGN {
 }
 
 #[derive(Debug, Queryable, Serialize)]
-pub struct PlayerRating {
+pub struct PlayerStatistics {
     pub timestamp: SystemTime,
     pub rank: i32,
     pub rating: f32,

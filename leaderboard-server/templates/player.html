@@ -10,6 +10,9 @@
 {% block content %}
 <h1><a href="/">linewar.org</a></h1>
 <h2> {{ context.player.name }}</h2>
+<object data="/plot/rating/{{ context.player.steam_id }}" type="image/svg+xml">
+    <p>Error loading ratings plot.</p>
+</object>
 <h3>History</h3>
 <table>
     <thead>
