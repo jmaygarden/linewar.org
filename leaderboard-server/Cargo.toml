@@ -10,6 +10,7 @@ anyhow = "1.0.57"
 askama = { version = "0.11.1" }
 axum = "0.5.6"
 axum-macros = "0.2.2"
+chrono = "0.4.19"
 dotenv = "0.15.0"
 futures-util = "0.3.21"
 leaderboard-db = { path = "../leaderboard-db" }

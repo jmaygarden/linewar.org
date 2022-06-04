@@ -136,22 +136,8 @@ async fn plot_rating(
 
                         root.fill(&WHITE).unwrap();
 
-                        let x_min = context
-                            .history
-                            .iter()
-                            .map(|x| x.timestamp)
-                            .min()
-                            .unwrap()
-                            .date()
-                            .and_hms(0, 0, 0);
-                        let x_max = context
-                            .history
-                            .iter()
-                            .map(|x| x.timestamp)
-                            .max()
-                            .unwrap()
-                            .date()
-                            .and_hms(0, 0, 0);
+                        let x_min = context.history.iter().map(|x| x.timestamp).min().unwrap();
+                        let x_max = context.history.iter().map(|x| x.timestamp).max().unwrap();
                         let mut chart = ChartBuilder::on(&root)
                             .caption(
                                 format!("{} Rating", context.player.name),
@@ -163,7 +149,11 @@ async fn plot_rating(
                             .build_cartesian_2d(x_min..x_max, 0f32..50f32)
                             .unwrap();
 
-                        chart.configure_mesh().draw().unwrap();
+                        chart
+                            .configure_mesh()
+                            .x_label_formatter(&|x| format!("{}", x.date().naive_utc()))
+                            .draw()
+                            .unwrap();
                         chart
                             .draw_series(
                                 AreaSeries::new(
