@@ -9,7 +9,7 @@ edition = "2021"
 r2d2 = "0.8.9"
 thiserror = "1.0.31"
 byteorder = "1.4.3"
-chrono = "0.4.19"
+chrono = { version = "0.4.19", features = ["serde"] }
 
 [dependencies.diesel]
 version = "1.4.8"

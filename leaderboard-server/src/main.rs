@@ -2,13 +2,14 @@ use crate::cache::CacheService;
 use askama::Template;
 use axum::{
     extract::Path,
-    http::StatusCode,
+    http::{header::CONTENT_TYPE, StatusCode},
     response::{Html, IntoResponse},
     routing::get,
     Extension, Router,
 };
 use leaderboard_db::service::{DatabaseService, Leaderboard, Player};
 use std::net::SocketAddr;
+use tokio::sync::oneshot;
 use tower_http::trace::TraceLayer;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry};
@@ -22,6 +23,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(root))
         .route("/player/:steam_id", get(player))
+        .route("/plot/rating/:steam_id", get(plot_rating))
         .layer(TraceLayer::new_for_http())
         .layer(Extension(service));
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
@@ -64,7 +66,6 @@ impl Services {
 }
 
 #[tracing::instrument(skip(services))]
-#[axum_macros::debug_handler]
 async fn root(
     Extension(services): Extension<Services>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
@@ -111,6 +112,82 @@ async fn player(
         .map_err(into_error_response)?;
 
     Ok(Html(response))
+}
+
+#[tracing::instrument(skip(services))]
+async fn plot_rating(
+    Extension(services): Extension<Services>,
+    Path(steam_id): Path<u64>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let response = services
+        .cache
+        .get_cached(format!("plot/rating/{steam_id}").as_str(), || {
+            Box::pin(async move {
+                use plotters::prelude::*;
+
+                let context = services.db.get_player(steam_id).await?;
+                let (tx, rx) = oneshot::channel();
+
+                tokio::task::spawn_blocking(move || {
+                    let mut svg = String::new();
+                    {
+                        let root =
+                            SVGBackend::with_string(&mut svg, (640, 480)).into_drawing_area();
+
+                        root.fill(&WHITE).unwrap();
+
+                        let x_min = context
+                            .history
+                            .iter()
+                            .map(|x| x.timestamp)
+                            .min()
+                            .unwrap()
+                            .date()
+                            .and_hms(0, 0, 0);
+                        let x_max = context
+                            .history
+                            .iter()
+                            .map(|x| x.timestamp)
+                            .max()
+                            .unwrap()
+                            .date()
+                            .and_hms(0, 0, 0);
+                        let mut chart = ChartBuilder::on(&root)
+                            .caption(
+                                format!("{} Rating", context.player.name),
+                                ("sans-serif", 30).into_font(),
+                            )
+                            .margin(20)
+                            .x_label_area_size(30)
+                            .y_label_area_size(30)
+                            .build_cartesian_2d(x_min..x_max, 0f32..50f32)
+                            .unwrap();
+
+                        chart.configure_mesh().draw().unwrap();
+                        chart
+                            .draw_series(
+                                AreaSeries::new(
+                                    context.history.iter().map(|i| (i.timestamp, i.rating)),
+                                    0f32,
+                                    &BLUE.mix(0.2),
+                                )
+                                .border_style(&BLUE),
+                            )
+                            .unwrap();
+                    }
+
+                    tx.send(svg).ok();
+                });
+
+                let response = rx.await?;
+
+                Ok(response)
+            })
+        })
+        .await
+        .map_err(into_error_response)?;
+
+    Ok(([(CONTENT_TYPE, "image/svg+xml")], response))
 }
 
 #[derive(Template)]
