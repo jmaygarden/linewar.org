@@ -1,18 +1,28 @@
+use crate::cache::CacheService;
 use askama::Template;
-use axum::{extract::Path, http::StatusCode, response::Html, routing::get, Extension, Router};
+use axum::{
+    extract::Path,
+    http::StatusCode,
+    response::{Html, IntoResponse},
+    routing::get,
+    Extension, Router,
+};
 use leaderboard_db::service::{DatabaseService, Leaderboard, Player};
 use std::net::SocketAddr;
+use tower_http::trace::TraceLayer;
 use tracing::info;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry};
+use tracing_tree::HierarchicalLayer;
 
 #[tokio::main]
 async fn main() {
-    dotenv::dotenv().ok();
-    tracing_subscriber::fmt::init();
+    setup();
 
     let service = Services::start().await;
     let app = Router::new()
         .route("/", get(root))
         .route("/player/:steam_id", get(player))
+        .layer(TraceLayer::new_for_http())
         .layer(Extension(service));
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     info!("Listening on {addr}");
@@ -23,31 +33,56 @@ async fn main() {
         .expect("critical error");
 }
 
+fn setup() {
+    dotenv::dotenv().ok();
+
+    Registry::default()
+        .with(EnvFilter::from_default_env())
+        .with(
+            HierarchicalLayer::new(2)
+                .with_targets(true)
+                .with_bracketed_fields(true),
+        )
+        .init();
+}
+
 #[derive(Clone)]
 struct Services {
+    cache: CacheService,
     db: DatabaseService,
 }
 
 impl Services {
     async fn start() -> Self {
         let db = DatabaseService::new().expect("error connecting to database");
+        let cache = CacheService::new()
+            .await
+            .expect("error connecting to cache");
 
-        Self { db }
+        Self { cache, db }
     }
 }
 
-async fn root(Extension(services): Extension<Services>) -> Result<Html<String>, StatusCode> {
-    let context = services
-        .db
-        .get_leaderboard()
-        .await
-        .map_err(|_error| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let template = RootTemplate { context };
+#[tracing::instrument(skip(services))]
+#[axum_macros::debug_handler]
+async fn root(
+    Extension(services): Extension<Services>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let response = services
+        .cache
+        .get_cached("root", || {
+            Box::pin(async move {
+                let context = services.db.get_leaderboard().await?;
+                let template = RootTemplate { context };
+                let response = template.render()?;
 
-    match template.render() {
-        Ok(html) => Ok(Html(html)),
-        Err(_error) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
+                Ok(response)
+            })
+        })
+        .await
+        .map_err(into_error_response)?;
+
+    Ok(Html(response))
 }
 
 #[derive(Template)]
@@ -56,21 +91,26 @@ struct RootTemplate {
     context: Leaderboard,
 }
 
+#[tracing::instrument(skip(services))]
 async fn player(
     Extension(services): Extension<Services>,
     Path(steam_id): Path<u64>,
-) -> Result<Html<String>, StatusCode> {
-    let context = services
-        .db
-        .get_player(steam_id)
-        .await
-        .map_err(|_error| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let template = PlayerTemplate { context };
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let response = services
+        .cache
+        .get_cached(format!("player/{steam_id}").as_str(), || {
+            Box::pin(async move {
+                let context = services.db.get_player(steam_id).await?;
+                let template = PlayerTemplate { context };
+                let response = template.render()?;
 
-    match template.render() {
-        Ok(html) => Ok(Html(html)),
-        Err(_error) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
+                Ok(response)
+            })
+        })
+        .await
+        .map_err(into_error_response)?;
+
+    Ok(Html(response))
 }
 
 #[derive(Template)]
@@ -78,3 +118,15 @@ async fn player(
 struct PlayerTemplate {
     context: Player,
 }
+
+fn into_error_response<E>(error: E) -> (StatusCode, String)
+where
+    E: std::fmt::Debug,
+{
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        format!("Internal error: {error:?}"),
+    )
+}
+
+mod cache;
