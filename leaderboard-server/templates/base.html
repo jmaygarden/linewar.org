@@ -1,21 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://unpkg.com/@picocss/pico@latest/css/pico.min.css">
-    <title>{% block title %}{{ title }} - linewar.org{% endblock %}</title>
-    <style>
-      body {
-        display: flex;
-        padding: 1em;
-      }
-    </style>
-    {% block head %}{% endblock %}
-  </head>
-  <body>
-    <div id="content">
-      {% block content %}{% endblock %}
-    </div>
-  </body>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://unpkg.com/@picocss/pico@latest/css/pico.min.css">
+  <title>{% block title %}{{ title }} - linewar.org{% endblock %}</title>
+  <style>
+    body {
+      display: flex;
+      padding: 1em;
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+
+<body>
+  <div id="content">
+    <p>
+      <b><a href="/">linewar.org</a></b>
+      <span>Leaderboard: <a href="/">Overall</a></span> | </span><a href="/recent">Weekly</a><span>
+    </p>
+    {% block content %}{% endblock %}
+  </div>
+</body>
+
 </html>
