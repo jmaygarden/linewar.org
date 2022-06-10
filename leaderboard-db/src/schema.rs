@@ -1,7 +1,7 @@
 table! {
-    associated_leaderboard (steam_association_id, leaderboard_id) {
-        steam_association_id -> Int4,
+    associated_leaderboard (leaderboard_id, steam_association_id) {
         leaderboard_id -> Int4,
+        steam_association_id -> Int4,
     }
 }
 
