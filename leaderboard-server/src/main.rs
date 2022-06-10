@@ -150,12 +150,12 @@ impl From<RecentLeaderboard> for LeaderboardEntry {
             rating,
             wins,
             losses,
-            last_played,
+            last_at,
             ..
         } = value;
         let time_ago = timeago::Formatter::new()
             .min_unit(TimeUnit::Hours)
-            .convert(last_played.elapsed().unwrap_or_default());
+            .convert(last_at.elapsed().unwrap_or_default());
 
         Self {
             rank,

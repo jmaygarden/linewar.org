@@ -164,7 +164,7 @@ pub struct RecentLeaderboard {
     #[sql_type = "Binary"]
     pub steam_id: Vec<u8>,
     #[sql_type = "Timestamp"]
-    pub last_played: SystemTime,
+    pub last_at: SystemTime,
 }
 
 impl RecentLeaderboard {
