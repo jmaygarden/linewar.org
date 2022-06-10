@@ -17,6 +17,7 @@ leaderboard-db = { path = "../leaderboard-db" }
 plotters = "0.3.1"
 plotters-svg = "0.3.1"
 redis = { version = "0.21.5", features = ["connection-manager", "tokio-comp"] }
+timeago = "0.3.1"
 tokio = "1.18.2"
 tower = "0.4.12"
 tower-http = { version = "0.3.3", features = ["trace"] }

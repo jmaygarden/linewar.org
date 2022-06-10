@@ -1,6 +1,9 @@
 use super::schema::*;
 use byteorder::{LittleEndian, ReadBytesExt};
-use diesel::Queryable;
+use diesel::{
+    sql_types::{Binary, Float, Integer, Timestamp, VarChar},
+    Queryable,
+};
 use serde::{Serialize, Serializer};
 use std::time::SystemTime;
 
@@ -144,4 +147,28 @@ pub struct PlayerStatistics {
     pub rating: f32,
     pub wins: i32,
     pub losses: i32,
+}
+
+#[derive(Debug, QueryableByName, Serialize)]
+pub struct RecentLeaderboard {
+    #[sql_type = "Integer"]
+    pub rank: i32,
+    #[sql_type = "VarChar"]
+    pub name: String,
+    #[sql_type = "Float"]
+    pub rating: f32,
+    #[sql_type = "Integer"]
+    pub wins: i32,
+    #[sql_type = "Integer"]
+    pub losses: i32,
+    #[sql_type = "Binary"]
+    pub steam_id: Vec<u8>,
+    #[sql_type = "Timestamp"]
+    pub last_played: SystemTime,
+}
+
+impl RecentLeaderboard {
+    pub fn get_steam_id(&self) -> u64 {
+        self.steam_id.as_slice().read_u64::<LittleEndian>().unwrap_or(0)
+    }
 }

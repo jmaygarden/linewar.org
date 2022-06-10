@@ -7,8 +7,12 @@ use axum::{
     routing::get,
     Extension, Router,
 };
-use leaderboard_db::service::{DatabaseService, Leaderboard, Player};
+use leaderboard_db::{
+    models::RecentLeaderboard,
+    service::{DatabaseService, Leaderboard, Player},
+};
 use std::net::SocketAddr;
+use timeago::TimeUnit;
 use tokio::sync::oneshot;
 use tower_http::trace::TraceLayer;
 use tracing::info;
@@ -22,6 +26,7 @@ async fn main() {
     let service = Services::start().await;
     let app = Router::new()
         .route("/", get(root))
+        .route("/recent", get(recent))
         .route("/player/:steam_id", get(player))
         .route("/plot/rating/:steam_id", get(plot_rating))
         .layer(TraceLayer::new_for_http())
@@ -90,6 +95,78 @@ async fn root(
 #[template(path = "root.html")]
 struct RootTemplate {
     context: Leaderboard,
+}
+
+#[tracing::instrument(skip(services))]
+async fn recent(
+    Extension(services): Extension<Services>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let response = services
+        .cache
+        .get_cached("recent", || {
+            Box::pin(async move {
+                let context = services
+                    .db
+                    .get_recent_leaderboard()
+                    .await?
+                    .into_iter()
+                    .map(LeaderboardEntry::from)
+                    .collect();
+                let template = RecentTemplate { context };
+                let response = template.render()?;
+
+                Ok(response)
+            })
+        })
+        .await
+        .map_err(into_error_response)?;
+
+    Ok(Html(response))
+}
+
+#[derive(Template)]
+#[template(path = "recent.html")]
+struct RecentTemplate {
+    context: Vec<LeaderboardEntry>,
+}
+
+#[derive(Debug)]
+struct LeaderboardEntry {
+    pub rank: i32,
+    pub name: String,
+    pub rating: f32,
+    pub wins: i32,
+    pub losses: i32,
+    pub steam_id: u64,
+    pub time_ago: String,
+}
+
+impl From<RecentLeaderboard> for LeaderboardEntry {
+    fn from(value: RecentLeaderboard) -> Self {
+        let steam_id = value.get_steam_id();
+        let RecentLeaderboard {
+            rank,
+            name,
+            rating,
+            wins,
+            losses,
+            last_played,
+            ..
+        } = value;
+        let time_ago = timeago::Formatter::new()
+            .min_unit(TimeUnit::Hours)
+            .convert(last_played.elapsed().unwrap_or_default());
+
+        Self {
+            rank,
+            name,
+            rating,
+            wins,
+            losses,
+            steam_id,
+            time_ago,
+        }
+    }
 }
 
 #[tracing::instrument(skip(services))]

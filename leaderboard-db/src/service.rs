@@ -1,5 +1,5 @@
 use crate::{
-    models::{LeaderboardEntry, LeaderboardScrape, PlayerIGN, PlayerStatistics},
+    models::{LeaderboardEntry, LeaderboardScrape, PlayerIGN, PlayerStatistics, RecentLeaderboard},
     schema::{
         associated_leaderboard, avatar_hash, leaderboard, leaderboard_scrape, names,
         steam_association,
@@ -134,6 +134,21 @@ impl DatabaseService {
                         history,
                     })
                 })
+                .map_err(Error::from)
+        });
+
+        rx.await.map_err(Error::from)
+    }
+
+    pub async fn get_recent_leaderboard(&self) -> Result<Vec<RecentLeaderboard>> {
+        let (context, rx) = self.setup_request().await?;
+
+        tokio::task::spawn_blocking(move || {
+            let sql = include_str!("latest-leaderboard.sql");
+
+            diesel::sql_query(sql)
+                .load::<RecentLeaderboard>(&context.connection)
+                .map(move |entries| context.tx.send(entries).ok())
                 .map_err(Error::from)
         });
 

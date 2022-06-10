@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Recent Top 100{% endblock %}
+
+{% block head %}
+<style>
+</style>
+{% endblock %}
+
+{% block content %}
+<h1><a href="/">linewar.org</a></h1>
+<table>
+    <thead>
+        <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Rating</th>
+            <th>Wins</th>
+            <th>Losses</th>
+            <th>Last Played</th>
+        </tr>
+    </thead>
+    {% for entry in context %}
+    <tr>
+        <td>{{ entry.rank }}</td>
+        <td><a href="/player/{{ entry.steam_id }}">{{ entry.name }}</a></td>
+        <td>{{ entry.rating }}</td>
+        <td>{{ entry.wins }}</td>
+        <td>{{ entry.losses }}</td>
+        <td>{{ entry.time_ago }}</td>
+    </tr>
+    {% endfor %}
+    <tbody>
+
+    </tbody>
+</table>
+{% endblock %}
