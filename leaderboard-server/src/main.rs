@@ -110,6 +110,7 @@ async fn recent(
                     .get_recent_leaderboard()
                     .await?
                     .into_iter()
+                    .enumerate()
                     .map(LeaderboardEntry::from)
                     .collect();
                 let template = RecentTemplate { context };
@@ -132,7 +133,8 @@ struct RecentTemplate {
 
 #[derive(Debug)]
 struct LeaderboardEntry {
-    pub rank: i32,
+    pub recent_rank: i32,
+    pub overall_rank: i32,
     pub name: String,
     pub rating: f32,
     pub wins: i32,
@@ -141,9 +143,9 @@ struct LeaderboardEntry {
     pub time_ago: String,
 }
 
-impl From<RecentLeaderboard> for LeaderboardEntry {
-    fn from(value: RecentLeaderboard) -> Self {
-        let steam_id = value.get_steam_id();
+impl From<(usize, RecentLeaderboard)> for LeaderboardEntry {
+    fn from(value: (usize, RecentLeaderboard)) -> Self {
+        let steam_id = value.1.get_steam_id();
         let RecentLeaderboard {
             rank,
             name,
@@ -152,13 +154,16 @@ impl From<RecentLeaderboard> for LeaderboardEntry {
             losses,
             last_at,
             ..
-        } = value;
+        } = value.1;
+        let recent_rank = value.0 as i32 + 1;
+        let overall_rank = rank;
         let time_ago = timeago::Formatter::new()
             .min_unit(TimeUnit::Hours)
             .convert(last_at.elapsed().unwrap_or_default());
 
         Self {
-            rank,
+            recent_rank,
+            overall_rank,
             name,
             rating,
             wins,

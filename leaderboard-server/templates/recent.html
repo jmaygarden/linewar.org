@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Recent Top 100{% endblock %}
+{% block title %}Weekly Leaderboard{% endblock %}
 
 {% block head %}
 <style>
@@ -9,10 +9,12 @@
 
 {% block content %}
 <h1><a href="/">linewar.org</a></h1>
+<h2>Weekly Leaderboard</h2>
 <table>
     <thead>
         <tr>
-            <th>Rank</th>
+            <th>Weekly Rank</th>
+            <th>Overall Rank</th>
             <th>Player</th>
             <th>Rating</th>
             <th>Wins</th>
@@ -22,7 +24,8 @@
     </thead>
     {% for entry in context %}
     <tr>
-        <td>{{ entry.rank }}</td>
+        <td>{{ entry.recent_rank }}</td>
+        <td>{{ entry.overall_rank }}</td>
         <td><a href="/player/{{ entry.steam_id }}">{{ entry.name }}</a></td>
         <td>{{ entry.rating }}</td>
         <td>{{ entry.wins }}</td>
