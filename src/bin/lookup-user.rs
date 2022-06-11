@@ -19,31 +19,47 @@ async fn main() {
 
     let args = Args::parse();
     let mut steam = Steam::new().expect("error initializing Steam client");
+    let mut page = 0;
 
-    steam
-        .start_session()
-        .await
-        .expect("failed to fetch the session ID cookie");
+        steam
+            .start_session()
+            .await
+            .expect("failed to fetch the session ID cookie");
 
-    let search_response = steam
-        .search_users(args.name.as_str(), 1)
-        .await
-        .expect("error searching for Steam users");
-    let users = scrape_steam_users(search_response.html.as_str(), |user| {
-        let hash = parse_avatar_url(user.avatar.as_str())?;
+    loop {
+        eprintln!("page {page}");
 
-        if user.name == args.name && hash == args.avatar {
-            Some(user.id)
-        } else {
-            None
+        page += 1;
+
+        let search_response = steam
+            .search_users(args.name.as_str(), page)
+            .await
+            .expect("error searching for Steam users");
+
+        if search_response.search_result_count == 0 {
+            eprintln!("user not found");
+            return;
         }
-    })
-    .expect("error parsing users");
 
-    for id in users.into_iter() {
-        match resolve_id(&steam, id).await {
-            Ok(value) => println!("{}, {}, {value}", args.name, args.avatar),
-            Err(error) => error!("{error:?}"),
+        let users = scrape_steam_users(search_response.html.as_str(), |user| {
+            let hash = parse_avatar_url(user.avatar.as_str())?;
+
+            if user.name == args.name && hash == args.avatar {
+                Some(user.id)
+            } else {
+                None
+            }
+        })
+        .expect("error parsing users");
+
+        for id in users.into_iter() {
+            match resolve_id(&steam, id).await {
+                Ok(value) => {
+                    println!("{}, {}, {value}", args.name, args.avatar);
+                    return;
+                }
+                Err(error) => error!("{error:?}"),
+            }
         }
     }
 }

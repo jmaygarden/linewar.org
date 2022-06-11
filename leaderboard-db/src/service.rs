@@ -1,15 +1,15 @@
 use crate::{
     models::{LeaderboardEntry, LeaderboardScrape, PlayerIGN, PlayerStatistics, RecentLeaderboard},
     schema::{
-        associated_leaderboard, avatar_hash, leaderboard, leaderboard_scrape, names,
-        steam_association,
+        associated_leaderboard, avatar_hash, current_leaderboard, leaderboard, leaderboard_scrape,
+        names, steam_association,
     },
     Error, Result,
 };
 use chrono::{serde::ts_milliseconds, DateTime, Utc};
 use diesel::{
-    r2d2::ConnectionManager, ExpressionMethods, JoinOnDsl, NullableExpressionMethods, PgConnection,
-    QueryDsl, RunQueryDsl,
+    r2d2::ConnectionManager, ExpressionMethods, NullableExpressionMethods, PgConnection, QueryDsl,
+    RunQueryDsl,
 };
 use r2d2::{Pool, PooledConnection};
 use serde::Serialize;
@@ -60,37 +60,30 @@ impl DatabaseService {
 
     pub async fn get_leaderboard(&self) -> Result<Leaderboard> {
         let (context, rx) = self.setup_request().await?;
+        let LeaderboardScrape { at, .. } = get_latest_scrape(&context.connection)?;
 
         tokio::task::spawn_blocking(move || {
-            let scrape = get_latest_scrape(&context.connection)?;
-
-            leaderboard::table
-                .left_join(
-                    associated_leaderboard::table.inner_join(steam_association::table.on(
-                        associated_leaderboard::steam_association_id.eq(steam_association::id),
-                    )),
-                )
-                .filter(leaderboard::leaderboard_scrape_id.eq(scrape.id))
+            let timestamp = at.into();
+            let result = current_leaderboard::table
                 .select((
-                    leaderboard::rank,
-                    leaderboard::avatar,
-                    leaderboard::name,
-                    leaderboard::rating,
-                    leaderboard::wins,
-                    leaderboard::losses,
-                    steam_association::steam_id.nullable(),
+                    current_leaderboard::rank,
+                    current_leaderboard::avatar,
+                    current_leaderboard::name,
+                    current_leaderboard::rating,
+                    current_leaderboard::wins,
+                    current_leaderboard::losses,
+                    current_leaderboard::steam_id.nullable(),
                 ))
-                .order(leaderboard::rank)
                 .load(&context.connection)
-                .map(move |entries| {
-                    let timestamp = scrape.at.into();
+                .map(|entries| Leaderboard { timestamp, entries })
+                .map_err(Error::from);
 
-                    context.tx.send(Leaderboard { timestamp, entries }).ok();
-                })
-                .map_err(Error::from)
+            context.tx.send(result).ok();
         });
 
-        rx.await.map_err(Error::from)
+        rx.await
+            .map_err(Error::from)
+            .and_then(std::convert::identity)
     }
 
     pub async fn get_player(&self, steam_id: u64) -> Result<Player> {

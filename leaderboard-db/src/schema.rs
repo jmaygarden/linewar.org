@@ -20,6 +20,20 @@ table! {
 }
 
 table! {
+    current_leaderboard (id) {
+        id -> Int4,
+        at -> Timestamp,
+        rank -> Int4,
+        avatar -> Varchar,
+        name -> Varchar,
+        rating -> Float4,
+        wins -> Int4,
+        losses -> Int4,
+        steam_id -> Bytea,
+    }
+}
+
+table! {
     leaderboard (id) {
         id -> Int4,
         leaderboard_scrape_id -> Int4,
@@ -36,6 +50,21 @@ table! {
     leaderboard_scrape (id) {
         id -> Int4,
         at -> Timestamp,
+    }
+}
+
+table! {
+    leaderboard_view (id) {
+        id -> Int4,
+        leaderboard_scrape_id -> Int4,
+        at -> Timestamp,
+        rank -> Int4,
+        avatar -> Varchar,
+        name -> Varchar,
+        rating -> Float4,
+        wins -> Int4,
+        losses -> Int4,
+        steam_id -> Bytea,
     }
 }
 
@@ -58,6 +87,7 @@ table! {
 joinable!(associated_leaderboard -> leaderboard (leaderboard_id));
 joinable!(associated_leaderboard -> steam_association (steam_association_id));
 joinable!(leaderboard -> leaderboard_scrape (leaderboard_scrape_id));
+joinable!(leaderboard_view -> leaderboard_scrape (leaderboard_scrape_id));
 joinable!(steam_association -> names (names_id));
 joinable!(steam_association -> avatar_hash (avatar_hash_id));
 
