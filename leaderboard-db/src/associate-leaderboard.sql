@@ -12,4 +12,5 @@ FROM
     LEFT JOIN associated_leaderboard ON leaderboard.id = associated_leaderboard.leaderboard_id
     AND steam_association.id = associated_leaderboard.steam_association_id
 WHERE
-    associated_leaderboard.leaderboard_id IS NULL;
+    associated_leaderboard.leaderboard_id IS NULL
+ON CONFLICT DO NOTHING;
