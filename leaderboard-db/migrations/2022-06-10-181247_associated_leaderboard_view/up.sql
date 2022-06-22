@@ -44,7 +44,7 @@ WHERE
         ORDER BY
             at DESC
         LIMIT
-            1
+            1 OFFSET 1
     )
 ORDER BY
     rank;
